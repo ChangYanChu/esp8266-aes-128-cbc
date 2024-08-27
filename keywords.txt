@@ -1,0 +1,10 @@
+# Syntax Coloring Map for AESCrypto Library
+
+# Datatypes (TYPE)
+AESCrypto    KEYWORD1
+
+# Methods and Functions (FUNCTION)
+encryptText  KEYWORD2
+decryptText  KEYWORD2
+
+# Keywords (KEYWORD)
