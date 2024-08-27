@@ -20,7 +20,6 @@ This library provides a simple implementation of AES-128-CBC encryption and decr
 Here's an example of how to use the `AESCrypto` library on an ESP8266:
 
 ```cpp
-#include <Arduino.h>
 #include "AESCrypto.h"
 
 // Key and IV as strings (16 characters each)
