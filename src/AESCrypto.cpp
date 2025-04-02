@@ -32,108 +32,109 @@
  *
  */
 
-#include "AESCrypto.h"
-#if defined(ESP8266)
-#include <bearssl/bearssl.h>
-#elif defined(ESP32)
-#include "mbedtls/aes.h"
-// ...还需要修改后面的加解密逻辑，改为使用 mbedTLS API...
-#endif
-#include "Base64.h"
+ #include "AESCrypto.h"
 
-AESCrypto::AESCrypto(String key, String iv)
-{
-  convertStringToHex(key, aes_key, sizeof(aes_key));
-  convertStringToHex(iv, aes_iv, sizeof(aes_iv));
-}
-
-void AESCrypto::convertStringToHex(const String &str, uint8_t *hexArray, size_t arraySize)
-{
-  for (size_t i = 0; i < arraySize; ++i)
-  {
-    hexArray[i] = str[i];
-  }
-}
-
-String AESCrypto::encrypt(String plainText)
-{
-  int len = plainText.length();
-  int n_blocks = len / 16 + 1;
-  uint8_t data[n_blocks * 16];
-  memcpy(data, plainText.c_str(), len);
-  pkcs7Padding(data, len, 16);
-
-  uint8_t key[16], iv[16];
-  memcpy(key, aes_key, 16);
-  memcpy(iv, aes_iv, 16);
-
-#if defined(ESP8266)
-  // BearSSL 方式
-  br_aes_big_cbcenc_keys encCtx;
-  br_aes_big_cbcenc_init(&encCtx, key, 16);
-  br_aes_big_cbcenc_run(&encCtx, iv, data, n_blocks * 16);
-#elif defined(ESP32)
-  // mbedTLS 方式
-  mbedtls_aes_context encCtx;
-  mbedtls_aes_init(&encCtx);
-  mbedtls_aes_setkey_enc(&encCtx, key, 128);
-  mbedtls_aes_crypt_cbc(&encCtx, MBEDTLS_AES_ENCRYPT, n_blocks * 16, iv, data, data);
-  mbedtls_aes_free(&encCtx);
-#endif
-
-  len = n_blocks * 16;
-  char encoded_data[base64_enc_len(len)];
-  base64_encode(encoded_data, (char *)data, len);
-  return String(encoded_data);
-}
-
-String AESCrypto::decrypt(String encryptedText)
-{
-  int input_len = encryptedText.length();
-  char *encoded_data = const_cast<char *>(encryptedText.c_str());
-  int len = base64_dec_len(encoded_data, input_len);
-  uint8_t data[len];
-  base64_decode((char *)data, encoded_data, input_len);
-
-  uint8_t key[16], iv[16];
-  memcpy(key, aes_key, 16);
-  memcpy(iv, aes_iv, 16);
-
-  int n_blocks = len / 16;
-
-#if defined(ESP8266)
-  // BearSSL 方式
-  br_aes_big_cbcdec_keys decCtx;
-  br_aes_big_cbcdec_init(&decCtx, key, 16);
-  br_aes_big_cbcdec_run(&decCtx, iv, data, n_blocks * 16);
-#elif defined(ESP32)
-  // mbedTLS 方式
-  mbedtls_aes_context decCtx;
-  mbedtls_aes_init(&decCtx);
-  mbedtls_aes_setkey_dec(&decCtx, key, 128);
-  mbedtls_aes_crypt_cbc(&decCtx, MBEDTLS_AES_DECRYPT, n_blocks * 16, iv, data, data);
-  mbedtls_aes_free(&decCtx);
-#endif
-
-  size_t dataLen = len;
-  removePkcs7Padding(data, dataLen, 16);
-  return String((char *)data).substring(0, dataLen);
-}
-
-void AESCrypto::pkcs7Padding(byte *data, size_t dataLength, size_t blockSize)
-{
-  size_t paddingLen = blockSize - (dataLength % blockSize);
-  for (size_t i = dataLength; i < dataLength + paddingLen; i++)
-  {
-    data[i] = paddingLen;
-  }
-}
-
-void AESCrypto::removePkcs7Padding(byte *data, size_t &dataLength, size_t blockSize)
-{
-  size_t paddingLen = data[dataLength - 1];
-  if (paddingLen <= blockSize)
-  {
-    dataLength -= paddingLen;
-  }
-}
+ #if defined(ESP8266)
+ #include <bearssl/bearssl.h>
+ #elif defined(ESP32)
+ #include "mbedtls/aes.h"
+ #endif
+ 
+ #include "Base64.h"
+ 
+ AESCrypto::AESCrypto(String key, String iv)
+ {
+   convertStringToHex(key, aes_key, sizeof(aes_key));
+   convertStringToHex(iv, aes_iv, sizeof(aes_iv));
+ }
+ 
+ void AESCrypto::convertStringToHex(const String &str, uint8_t *hexArray, size_t arraySize)
+ {
+   for (size_t i = 0; i < arraySize; ++i)
+   {
+     hexArray[i] = str[i];
+   }
+ }
+ 
+ String AESCrypto::encrypt(String plainText)
+ {
+   int len = plainText.length();
+   int n_blocks = len / 16 + 1;
+   uint8_t data[n_blocks * 16];
+   memcpy(data, plainText.c_str(), len);
+   pkcs7Padding(data, len, 16);
+ 
+   uint8_t key[16], iv[16];
+   memcpy(key, aes_key, 16);
+   memcpy(iv, aes_iv, 16);
+ 
+ #if defined(ESP8266)
+   // BearSSL
+   br_aes_big_cbcenc_keys encCtx;
+   br_aes_big_cbcenc_init(&encCtx, key, 16);
+   br_aes_big_cbcenc_run(&encCtx, iv, data, n_blocks * 16);
+ #elif defined(ESP32)
+   // mbedTLS
+   mbedtls_aes_context encCtx;
+   mbedtls_aes_init(&encCtx);
+   mbedtls_aes_setkey_enc(&encCtx, key, 128);
+   mbedtls_aes_crypt_cbc(&encCtx, MBEDTLS_AES_ENCRYPT, n_blocks * 16, iv, data, data);
+   mbedtls_aes_free(&encCtx);
+ #endif
+ 
+   len = n_blocks * 16;
+   char encoded_data[base64_enc_len(len)];
+   base64_encode(encoded_data, (char *)data, len);
+   return String(encoded_data);
+ }
+ 
+ String AESCrypto::decrypt(String encryptedText)
+ {
+   int input_len = encryptedText.length();
+   char *encoded_data = const_cast<char *>(encryptedText.c_str());
+   int len = base64_dec_len(encoded_data, input_len);
+   uint8_t data[len];
+   base64_decode((char *)data, encoded_data, input_len);
+ 
+   uint8_t key[16], iv[16];
+   memcpy(key, aes_key, 16);
+   memcpy(iv, aes_iv, 16);
+ 
+   int n_blocks = len / 16;
+ 
+ #if defined(ESP8266)
+   // BearSSL
+   br_aes_big_cbcdec_keys decCtx;
+   br_aes_big_cbcdec_init(&decCtx, key, 16);
+   br_aes_big_cbcdec_run(&decCtx, iv, data, n_blocks * 16);
+ #elif defined(ESP32)
+   // mbedTLS
+   mbedtls_aes_context decCtx;
+   mbedtls_aes_init(&decCtx);
+   mbedtls_aes_setkey_dec(&decCtx, key, 128);
+   mbedtls_aes_crypt_cbc(&decCtx, MBEDTLS_AES_DECRYPT, n_blocks * 16, iv, data, data);
+   mbedtls_aes_free(&decCtx);
+ #endif
+ 
+   size_t dataLen = len;
+   removePkcs7Padding(data, dataLen, 16);
+   return String((char *)data).substring(0, dataLen);
+ }
+ 
+ void AESCrypto::pkcs7Padding(byte *data, size_t dataLength, size_t blockSize)
+ {
+   size_t paddingLen = blockSize - (dataLength % blockSize);
+   for (size_t i = dataLength; i < dataLength + paddingLen; i++)
+   {
+     data[i] = paddingLen;
+   }
+ }
+ 
+ void AESCrypto::removePkcs7Padding(byte *data, size_t &dataLength, size_t blockSize)
+ {
+   size_t paddingLen = data[dataLength - 1];
+   if (paddingLen <= blockSize)
+   {
+     dataLength -= paddingLen;
+   }
+ }
