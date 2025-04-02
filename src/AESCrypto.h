@@ -30,24 +30,24 @@
  * 
  */
 
-#ifndef AESCRYPTO_H
-#define AESCRYPTO_H
-
-#include <Arduino.h>
-
-class AESCrypto {
-  public:
-    AESCrypto(String key, String iv);
-    String encrypt(String plainText);
-    String decrypt(String encryptedText);
-
-  private:
-    uint8_t aes_key[16];
-    uint8_t aes_iv[16];
-
-    void convertStringToHex(const String &str, uint8_t *hexArray, size_t arraySize);
-    void pkcs7Padding(byte* data, size_t dataLength, size_t blockSize);
-    void removePkcs7Padding(byte* data, size_t& dataLength, size_t blockSize);
-};
-
-#endif
+ #ifndef AESCRYPTO_H
+ #define AESCRYPTO_H
+ 
+ #include <Arduino.h>
+ 
+ class AESCrypto {
+   public:
+     AESCrypto(String key, String iv);
+     String encrypt(String plainText);
+     String decrypt(String encryptedText);
+ 
+   private:
+     uint8_t aes_key[16];
+     uint8_t aes_iv[16];
+ 
+     void convertStringToHex(const String &str, uint8_t *hexArray, size_t arraySize);
+     void pkcs7Padding(byte* data, size_t dataLength, size_t blockSize);
+     void removePkcs7Padding(byte* data, size_t& dataLength, size_t blockSize);
+ };
+ 
+ #endif
